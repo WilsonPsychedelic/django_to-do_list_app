@@ -1,0 +1,150 @@
+{% extends 'todos/base.html' %}
+
+{% block content %}
+<div class="bg-white rounded-2xl shadow-md border border-gray-100 p-8">
+
+  <h2 class="text-2xl font-bold text-gray-800 mb-1">
+    {% if form.instance.pk %} ✏️ Edit Task {% else %} 📝 New Task {% endif %}
+  </h2>
+  <p class="text-gray-400 text-sm mb-6">
+    {% if form.instance.pk %} Update the details below. {% else %} Fill in the details and hit Save. {% endif %}
+  </p>
+
+  <form method="post" id="todoForm">
+    {% csrf_token %}
+
+    <!-- Title -->
+    <label class="block text-sm font-semibold text-gray-600 mb-1">Title</label>
+    {{ form.title }}
+    {% if form.title.errors %}
+      <p class="text-red-500 text-xs mt-1">{{ form.title.errors|first }}</p>
+    {% endif %}
+
+    <!-- Description -->
+    <label class="block text-sm font-semibold text-gray-600 mt-5 mb-1">Description</label>
+    {{ form.description }}
+
+    <!-- Priority + Due Date side by side -->
+    <div class="grid grid-cols-2 gap-4 mt-5">
+      <div>
+        <label class="block text-sm font-semibold text-gray-600 mb-1">Priority</label>
+        {{ form.priority }}
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-600 mb-1">Due Date</label>
+        {{ form.due_date }}
+      </div>
+    </div>
+
+    <!-- Category + create-new link -->
+    <div class="mt-5">
+      <label class="block text-sm font-semibold text-gray-600 mb-1">
+        Category
+        <a href="#" id="newCategoryLink" class="font-normal text-indigo-500 hover:underline ml-2">+ New</a>
+      </label>
+      {{ form.category }}
+      <p class="text-xs text-gray-400 mt-1">Click "+ New" to create a category (opens in new tab, your form data will be saved)</p>
+    </div>
+
+    <!-- Buttons -->
+    <div class="flex gap-3 mt-8">
+      <button type="submit"
+              class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white
+                     font-semibold py-3 rounded-xl shadow transition-all
+                     duration-200 hover:shadow-md hover:-translate-y-0.5">
+        {% if form.instance.pk %} Save Changes {% else %} Add Task {% endif %}
+      </button>
+      <a href="{% url 'todo_list' %}"
+         class="px-5 py-3 rounded-xl border border-gray-200 text-gray-600
+                hover:bg-gray-50 font-medium transition-colors duration-200">
+        Cancel
+      </a>
+    </div>
+  </form>
+</div>
+
+<script>
+// Form field IDs
+const STORAGE_KEY = 'todoFormData';
+const form = document.getElementById('todoForm');
+const titleField = form.querySelector('[name="title"]');
+const descField = form.querySelector('[name="description"]');
+const priorityField = form.querySelector('[name="priority"]');
+const dueDateField = form.querySelector('[name="due_date"]');
+const categoryField = form.querySelector('[name="category"]');
+
+// Save form data to sessionStorage
+function saveFormData() {
+  const data = {
+    title: titleField.value,
+    description: descField.value,
+    priority: priorityField.value,
+    due_date: dueDateField.value,
+    category: categoryField.value
+  };
+  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+// Restore form data from sessionStorage
+function restoreFormData() {
+  const saved = sessionStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    const data = JSON.parse(saved);
+    titleField.value = data.title || '';
+    descField.value = data.description || '';
+    priorityField.value = data.priority || '';
+    dueDateField.value = data.due_date || '';
+    if (data.category) {
+      categoryField.value = data.category;
+    }
+    // Clear the saved data after restoring
+    sessionStorage.removeItem(STORAGE_KEY);
+  }
+}
+
+// On page load, check if we need to restore data
+window.addEventListener('load', function() {
+  restoreFormData();
+});
+
+// When clicking "+ New", save form data and open popup
+document.getElementById('newCategoryLink').addEventListener('click', function(e) {
+  e.preventDefault();
+  saveFormData();
+  const url = "{% url 'category_create' %}?from_todo=1";
+  window.open(url, '_blank', 'width=500,height=400');
+});
+
+// Poll for new categories every second while popup might be open
+let pollInterval;
+document.getElementById('newCategoryLink').addEventListener('click', function() {
+  const originalCount = categoryField.options.length;
+  
+  pollInterval = setInterval(function() {
+    // Fetch the current page to get updated category dropdown
+    fetch(window.location.href)
+      .then(response => response.text())
+      .then(html => {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const newSelect = doc.querySelector('[name="category"]');
+        
+        if (newSelect && newSelect.options.length > originalCount) {
+          // New category was added - update our dropdown
+          const currentValue = categoryField.value;
+          categoryField.innerHTML = newSelect.innerHTML;
+          
+          // Select the newly added category (last option)
+          categoryField.value = newSelect.options[newSelect.options.length - 1].value;
+          
+          // Stop polling
+          clearInterval(pollInterval);
+        }
+      });
+  }, 1000);
+  
+  // Stop polling after 60 seconds
+  setTimeout(() => clearInterval(pollInterval), 60000);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My To-Do List</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes gradientShift {
+      0%   { background-position: 0%   50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0%   50%; }
+    }
+    body {
+      background: linear-gradient(135deg, #eef2ff, #fdf2f8, #ede9fe);
+      background-size: 200% 200%;
+      animation: gradientShift 8s ease infinite;
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .todo-card { animation: fadeInUp 0.3s ease both; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col px-4">
+
+  <!-- Top Nav -->
+  <nav class="max-w-2xl w-full mx-auto mt-6 mb-2 flex items-center justify-between">
+    <span class="text-sm text-gray-500">
+      Hello, <span class="font-semibold text-gray-700">{{ request.user.username }}</span>
+    </span>
+    <form method="post" action="{% url 'logout' %}" class="inline">
+      {% csrf_token %}
+      <button type="submit"
+              class="text-sm text-gray-400 hover:text-red-500 transition-colors duration-200 bg-transparent border-0 cursor-pointer">
+        Logout
+      </button>
+    </form>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="w-full max-w-2xl mx-auto flex-1 py-6">
+    <div class="text-center mb-8">
+      <h1 class="text-5xl font-extrabold text-gray-800 tracking-tight">✅ My To-Do List</h1>
+      <p class="text-gray-500 mt-2 text-lg">Stay organised, stay on top.</p>
+    </div>
+
+    {% block content %}{% endblock %}
+  </div>
+
+</body>
+</html>
